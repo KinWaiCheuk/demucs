@@ -127,6 +127,7 @@ def get_solver_from_sig(sig, model_only=False):
 
 @hydra_main(config_path="../conf", config_name="config")
 def main(args):
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"        
     global __file__
     __file__ = hydra.utils.to_absolute_path(__file__)
     for attr in ["musdb", "wav", "metadata"]:
@@ -136,6 +137,7 @@ def main(args):
 
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1"
+
 
     if args.misc.verbose:
         logger.setLevel(logging.DEBUG)
