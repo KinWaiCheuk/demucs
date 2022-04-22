@@ -7,10 +7,10 @@
 import math
 import typing as tp
 
-import julius
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torchaudio.transforms import Resample
 
 from .states import capture_init
 from .utils import center_trim, unfold
@@ -320,6 +320,8 @@ class Demucs(nn.Module):
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
         self.skip_scales = nn.ModuleList()
+        self.upsampler = Resample(1, 2)
+        self.downsampler = Resample(2, 1)
 
         if glu:
             activation = nn.GLU(dim=1)
@@ -425,14 +427,14 @@ class Demucs(nn.Module):
         x = F.pad(x, (delta // 2, delta - delta // 2))
 
         if self.resample:
-            x = julius.resample_frac(x, 1, 2)
+            x = self.upsampler(x)
 
         saved = []
         for encode in self.encoder:
             x = encode(x)
             saved.append(x)
 
-        if self.lstm:
+        if self.lstm:     
             x = self.lstm(x)
 
         for decode in self.decoder:
@@ -441,7 +443,7 @@ class Demucs(nn.Module):
             x = decode(x + skip)
 
         if self.resample:
-            x = julius.resample_frac(x, 2, 1)
+            x = self.downsampler(x)
         x = x * std + mean
         x = center_trim(x, length)
         x = x.view(x.size(0), len(self.sources), self.audio_channels, x.size(-1))
